@@ -3,7 +3,7 @@ Repositório dedicado à disciplina Redes Neurais Artificiais, oferecida pelo Pr
 
 ## Integrantes:
 
-    * Guilherme Rocha Gonçalves, grgoncal@gmail.com
+*Guilherme Rocha Gonçalves, grgoncal@gmail.com
 
 ## License:
-    This project is licenced under the MIT Licence.
+This project is licenced under the MIT Licence.

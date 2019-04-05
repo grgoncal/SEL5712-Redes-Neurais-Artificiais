@@ -1,44 +1,53 @@
 # IMPORTS ----------------------------------------------------------
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 #////////////////////////////////////////////////////////////////////
 # CONSTANTS /////////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////
 
-learningRate = 0.01
-maxEpochs = 1000
-errTol = 0
+learningRate = 0.0025
+errTol = 0.000001
 trainNumber = 5
+maxEpochs = 5000
 
 #////////////////////////////////////////////////////////////////////
 # TRAIN /////////////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////
 
-def train(x, d, w):
+def train(x, d, w, testNumber):
     # INITIALIZE EPOCHS AND ERR -------------------------------------
     epoch = 0
-    err = 1
+    Eqm = 1
+    lEqm = 0
 
     # PRINT W INITIAL ----------------------------------------------
     print ("\n[W INITIAL]  " + str(w.T.values))
-
-    while(epoch < maxEpochs and err > errTol):
-        err = 0
+    
+    # CHART LIST ---------------------------------------------------
+    chart = [[],[]]
+    
+    while epoch < maxEpochs and abs(Eqm - lEqm) >= errTol:
+        lEqm = Eqm
+        Eqm = 0
+        
         for i in range(0,x.shape[0]):
             u = w.iloc[:,0] * x.iloc[i,:]
             u = u.sum()
-            if u >= 0:
-                y = 1
-            else:
-                y = -1
-
-            if (y - d.iloc[i]) == 2:
-                w = (w.T + learningRate * (d.iloc[i] - y) * x.iloc[i,:]).T
-                err += 1
-
+            w = (w.T + learningRate * (d.iloc[i] - u) * x.iloc[i,:]).T
+            Eqm += (d.iloc[i] - u) * (d.iloc[i] - u)
         epoch += 1
+        Eqm = Eqm/x.shape[0]
+        chart[0].append(epoch)
+        chart[1].append(Eqm)
 
+    plt.figure(1)
+    plt.plot(chart[0], chart[1])
+    plt.savefig("./" + str(testNumber) + ".png", dpi = 500)
+    plt.close()
+
+    
     print ("[W FINAL]  " + str(w.T.values))
     print ("[EPOCHS]  " + str(epoch) + "\n")
     return w
@@ -64,7 +73,7 @@ def test(w):
             y.append(-1)
 
     return y
-    
+
 #////////////////////////////////////////////////////////////////////
 # MAIN //////////////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////
@@ -78,7 +87,7 @@ x.insert(loc = 0, column=0, value = np.full((x.shape[0],1), -1))    # ADD -1 INP
 d = data.iloc[:,(data.shape[1] - 1)]                                # GET OUTPUTS
 
 for i in range(1, trainNumber + 1):
-    w = pd.DataFrame(np.random.rand((data.shape[1] - 1)))               # GENERATE WEIGHTS
+    w = pd.DataFrame(np.random.rand((data.shape[1] - 1)))
     print("[TRAINING NUMBER " + str(i) + "] ----------------------------------------------")
-    y = test(train(x, d, w))
+    y = test(train(x, d, w, i))
     print("[RESULT OF TRAINING NUMBER " + str(i) + "] " + str(y) + "\n")

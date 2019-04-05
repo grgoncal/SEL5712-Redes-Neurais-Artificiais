@@ -23,7 +23,7 @@ def train(x, d, w):
     # PRINT W INITIAL ----------------------------------------------
     print ("\n[W INITIAL]  " + str(w.T.values))
 
-    while(epoch < maxEpochs and err > errTol):
+    while(epoch < maxEpochs and err != errTol):
         err = 0
         for i in range(0,x.shape[0]):
             u = w.iloc[:,0] * x.iloc[i,:]

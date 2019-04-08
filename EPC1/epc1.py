@@ -52,10 +52,12 @@ def test(w):
     for name in reversed(x.columns.values):
         x.rename(columns = {name : name + 1}, inplace = True)
     x.insert(loc = 0, column=0, value = np.full((x.shape[0],1), -1))
-    
+
     y = []
+    u = 0 
 
     for i in range(0, x.shape[0]):
+        u = 0
         u = w.iloc[:,0] * x.iloc[i,:]
         u = u.sum()
         if u >= 0:

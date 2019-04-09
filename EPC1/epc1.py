@@ -33,7 +33,7 @@ def train(x, d, w):
             else:
                 y = -1
 
-            if (y - d.iloc[i]) == 2:
+            if abs(y - d.iloc[i]) == 2:
                 w = (w.T + learningRate * (d.iloc[i] - y) * x.iloc[i,:]).T
                 err += 1
 

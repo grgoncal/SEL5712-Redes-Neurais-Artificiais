@@ -26,7 +26,8 @@ def train(x, d, w1, w2):
 
     while abs(Eqm - lEqm) > errTol and epoch < maxEpochs:
         lEqm = Eqm
-    
+        Eqm = 0
+
         for inputIndex in range(x.shape[0]):
 
             # INITIALIZE INPUTS
@@ -34,23 +35,62 @@ def train(x, d, w1, w2):
             I2 = pd.DataFrame(np.zeros((numberNeurons2ndLayer,1)))
             Y1 = I1
             Y2 = I2
-            # D1 = pd.DataFrame(np.zeros((w1.shape[0],w1.shape[1])))
-            D2 = pd.DataFrame(np.zeros((numberNeurons2ndLayer,numberNeurons2ndLayer)))
+            D1 = pd.DataFrame(np.zeros((numberNeurons1stLayer, 1)))
+            D2 = pd.DataFrame(np.zeros((numberNeurons2ndLayer, 1)))
+            
+            # FORWARD
+            for neuronIndex1stLayer in range(numberNeurons1stLayer):
+                I1.iloc[neuronIndex1stLayer] += (w1.iloc[:,neuronIndex1stLayer] * x.iloc[inputIndex,:]).sum()
+                Y1.iloc[neuronIndex1stLayer] = logistic(I1.iloc[neuronIndex1stLayer])
+
+            for name in reversed(list(Y1.index)):
+                Y1.rename(index = {name : name + 1}, inplace = True)
+            Y1.loc[0] = -1
+            Y1 = Y1.sort_index()
+            
+            for neuronIndex2ndLayer in range(numberNeurons2ndLayer):
+                I2.iloc[neuronIndex2ndLayer] += (Y1.iloc[:,0] * w2.iloc[:,0]).sum()
+                Y2.iloc[neuronIndex2ndLayer] = logistic(I2.iloc[neuronIndex2ndLayer])
+
+            # BACKWARD
+            for neuronIndex2ndLayer in range(numberNeurons2ndLayer):
+                D2.iloc[neuronIndex2ndLayer] = (d.iloc[inputIndex] - Y2.iloc[neuronIndex2ndLayer]) * logistic(I2.iloc[neuronIndex2ndLayer]) * (1 - logistic(I2.iloc[neuronIndex2ndLayer]))
+                for wIndex2ndLayer in range(w2.shape[0]):
+                    w2.iloc[wIndex2ndLayer, neuronIndex2ndLayer] += learningRate * D2.iloc[neuronIndex2ndLayer, 0] * Y1.iloc[wIndex2ndLayer, 0]
+
+            for neuronIndex1stLayer in range(numberNeurons1stLayer):
+                for neuronIndex2ndLayer in range(numberNeurons2ndLayer):
+                    D1.iloc[neuronIndex1stLayer] = (D2.iloc[neuronIndex2ndLayer] * w2.iloc[neuronIndex1stLayer]).sum() * logistic(I1.iloc[neuronIndex1stLayer]) * (1 - logistic(I1.iloc[neuronIndex1stLayer])) 
+                for inputIndex1stLayer in range(x.shape[1]):
+                    w1.iloc[inputIndex1stLayer, neuronIndex1stLayer] += learningRate * D1.iloc[neuronIndex1stLayer, 0] * x.iloc[inputIndex, inputIndex1stLayer]
+
+        # REPEAT FORWARD STEP
+        for inputIndex in range(x.shape[0]):
+            
+            I1 = pd.DataFrame(np.zeros((numberNeurons1stLayer,1)))
+            I2 = pd.DataFrame(np.zeros((numberNeurons2ndLayer,1)))
+            Y1 = I1
+            Y2 = I2
 
             for neuronIndex1stLayer in range(numberNeurons1stLayer):
                 I1.iloc[neuronIndex1stLayer] += (w1.iloc[:,neuronIndex1stLayer] * x.iloc[inputIndex,:]).sum()
                 Y1.iloc[neuronIndex1stLayer] = logistic(I1.iloc[neuronIndex1stLayer])
-                for neuronIndex2ndLayer in range(numberNeurons2ndLayer):
-                    I2.iloc[neuronIndex2ndLayer] += (Y1.iloc[:,0] * w2.iloc[:,0]).sum()
-                    Y2.iloc[neuronIndex2ndLayer] = logistic(I2.iloc[neuronIndex2ndLayer])
 
+            for name in reversed(list(Y1.index)):
+                Y1.rename(index = {name : name + 1}, inplace = True)
+            Y1.loc[0] = -1
+            Y1 = Y1.sort_index()
+                
             for neuronIndex2ndLayer in range(numberNeurons2ndLayer):
-                D2.iloc[neuronIndex2ndLayer] = (d.iloc[inputIndex] - Y2.iloc[neuronIndex2ndLayer]) * logistic(I2.iloc[neuronIndex2ndLayer]) * (1 - logistic(I2.iloc[neuronIndex2ndLayer]))
-                for wIndex2ndLayer in range(w2.shape[0] - 1):
-                    w2.iloc[wIndex2ndLayer, neuronIndex2ndLayer] += learningRate * D2.iloc[neuronIndex2ndLayer, 0] * Y1.iloc[wIndex2ndLayer, 0]
-                    # print "[LOG]" + str(w2.iloc[wIndex2ndLayer, neuronIndex2ndLayer]) + " and " + str(D2.iloc[neuronIndex2ndLayer, 0]) + " and " + str(Y1.iloc[wIndex2ndLayer,0])
-            print w2
+                I2.iloc[neuronIndex2ndLayer] += (Y1.iloc[:,0] * w2.iloc[:,0]).sum()
+                Y2.iloc[neuronIndex2ndLayer] = logistic(I2.iloc[neuronIndex2ndLayer])
+                Eqm += 0.5 * (d.iloc[inputIndex] - Y2.iloc[neuronIndex2ndLayer ,0]) * (d.iloc[inputIndex] - Y2.iloc[neuronIndex2ndLayer ,0])
+            
+        # CALCULATE NEW ERROR
+        Eqm = (1/(x.shape[0] * 2)) * Eqm
+        print Eqm
 
+        # INCREMENT EPOCH
         epoch += 1
 
     return w1, w2

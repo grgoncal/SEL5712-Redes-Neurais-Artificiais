@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 learningRate = 0.1
 maxEpochs = 1000
-errTol = 0.000001
+errTol = 0.0001
 trainNumber = 5
 numberNeurons1stLayer = 15
 numberNeurons2ndLayer = 3
@@ -142,17 +142,17 @@ def test(w1, w2):
         Y2 = I2
 
         for neuronIndex1stLayer in range(numberNeurons1stLayer):
-            I1.iloc[neuronIndex1stLayer] += (w1.iloc[:,neuronIndex1stLayer] * x.iloc[inputIndex,:]).sum()
-            Y1.iloc[neuronIndex1stLayer] = logistic(I1.iloc[neuronIndex1stLayer,0])
+            I1.iloc[neuronIndex1stLayer,0] += (w1.iloc[:,neuronIndex1stLayer] * x.iloc[inputIndex,:]).sum()
+            Y1.iloc[neuronIndex1stLayer,0] = logistic(I1.iloc[neuronIndex1stLayer,0])
 
         for name in reversed(list(Y1.index)):
             Y1.rename(index = {name : name + 1}, inplace = True)
         Y1.loc[0] = -1
         Y1 = Y1.sort_index()
-                
+
         for neuronIndex2ndLayer in range(numberNeurons2ndLayer):
-            I2.iloc[neuronIndex2ndLayer] += (Y1.iloc[:,0] * w2.iloc[:,0]).sum()
-            Y2.iloc[neuronIndex2ndLayer] = logistic(I2.iloc[neuronIndex2ndLayer,0])
+            I2.iloc[neuronIndex2ndLayer,0] += (Y1.iloc[:,0] * w2.iloc[:,neuronIndex2ndLayer]).sum()
+            Y2.iloc[neuronIndex2ndLayer,0] = logistic(I2.iloc[neuronIndex2ndLayer,0])
             y.append(Y2.iloc[neuronIndex2ndLayer,0])
 
     return y

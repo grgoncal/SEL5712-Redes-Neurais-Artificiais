@@ -19,39 +19,48 @@ number_neurons_2nd_layer = 1
 
 def kMeans(train, w1):
 
-    last_groups = [[2],[0]]
-    groups = [[],[]]
+    groups = []
+    last_groups = []
+    for i in range(number_neurons_1st_layer):
+        last_groups.append([1])
+        groups.append([])
+    
 
     while(last_groups != groups):
-        
+
         last_groups = groups
+        groups = []
+        for i in range(number_neurons_1st_layer):
+            groups.append([])
+        
         euclidian_distance = pd.DataFrame(np.zeros((len(train), number_neurons_1st_layer)))
-        groups = [[],[]]
 
         for i in range(len(train)):
             for j in range(number_neurons_1st_layer):
-                euclidian_distance.iloc[i,j] = math.sqrt(math.pow(train.iloc[i,0] - w1.iloc[j,0], 2) + math.pow(train.iloc[i,1] - w1.iloc[j,1], 2))
+                for column in range(len(train.columns) - 1):
+                    euclidian_distance.iloc[i,j] += math.pow(train.iloc[i,column] - w1.iloc[j,column] , 2)
+                euclidian_distance.iloc[i,j] = math.sqrt(euclidian_distance.iloc[i,j])
             groups[euclidian_distance.iloc[i,:].idxmin()].append(i)
 
-        w1 = pd.DataFrame(np.zeros((2,2)))
+        w1 = pd.DataFrame(np.zeros((number_neurons_1st_layer,3)))
         
-        for i in groups[0]:
-            for j in range(number_neurons_1st_layer):
-                w1.iloc[0,j] += (train.iloc[i,j])/len(groups[0])
+        for i in range(number_neurons_1st_layer):
+            for j in groups[i]:
+                for n in range(len(train.columns) - 1):
+                    w1.iloc[i,n] += train.iloc[j,n]/len(groups[i])
 
-        for i in groups[1]:
-            for j in range(number_neurons_1st_layer):
-                w1.iloc[1,j] += (train.iloc[i,j])/len(groups[1])
     
-    variance = [0,0]
+    variance = []
+    for i in range(number_neurons_1st_layer):
+        variance.append(0)
 
-    for i in groups[0]:
-        variance[0] +=  math.pow(train.iloc[i,0] - w1.iloc[0,0], 2) + math.pow(train.iloc[i,1] - w1.iloc[0,1], 2)
-    variance[0] = variance[0]/len(groups[0])
+    for i in range(number_neurons_1st_layer):
+        for j in groups[i]:
+            for column in range(len(train.columns) - 1):
+                variance[i] += math.pow(train.iloc[j,column] - w1.iloc[i,column], 2) 
+            variance[i] = variance[i]/len(groups[i])
 
-    for i in groups[1]:
-        variance[1] +=  math.pow(train.iloc[i,0] - w1.iloc[1,0], 2) + math.pow(train.iloc[i,1] - w1.iloc[1,1], 2)
-    variance[1] = variance[1]/len(groups[1])
+    print str(groups) + "\n" + str(variance)
 
     return w1, variance
 
@@ -145,7 +154,7 @@ test = pd.read_csv('./test.csv', header = None)
 
 w1 = pd.DataFrame(train.iloc[:number_neurons_1st_layer,:-1])
 w2 = pd.DataFrame(np.random.rand(number_neurons_1st_layer + 1, number_neurons_2nd_layer))
-print w1
+
 # CALCULATE CLUSTERS
 w1, variance = kMeans(train, w1)
 w2, outputLayer(train,w1,w2,variance)

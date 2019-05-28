@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import sys
 
 #////////////////////////////////////////////////////////////////////
 # CONSTANTS /////////////////////////////////////////////////////////
@@ -17,7 +18,7 @@ number_neurons_2nd_layer = 1
 # K-MEANS ///////////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////
 
-def kMeans(train, w1):
+def kMeans(train, w1, number_neurons_1st_layer):
 
     groups = []
     last_groups = []
@@ -58,9 +59,7 @@ def kMeans(train, w1):
         for j in groups[i]:
             for column in range(len(train.columns) - 1):
                 variance[i] += math.pow(train.iloc[j,column] - w1.iloc[i,column], 2) 
-            variance[i] = variance[i]/len(groups[i])
-
-    print str(groups) + "\n" + str(variance)
+        variance[i] = variance[i]/len(groups[i])
 
     return w1, variance
 
@@ -69,30 +68,34 @@ def kMeans(train, w1):
 # OUTPUT LAYER //////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////
 
-def outputLayer(train,w1,w2, variance):
-    d = train.iloc[:,2]
+def outputLayer(train, w1, w2, variance, testNumber, number_neurons_1st_layer):
+    chart = [[],[]]
+
+    d = train.iloc[:,3]
     x = train.iloc[:,:-1]
 
-    z = pd.DataFrame(np.zeros((len(train),3)))
+    z = pd.DataFrame(np.zeros((len(train), number_neurons_1st_layer + 1)))
     for i in range(len(z)):
-        z.iloc[i,2] -= 1
+        z.iloc[i,number_neurons_1st_layer] -= 1
 
-    for i in range(len(train)):
-        for j in range(number_neurons_1st_layer):
-            z.iloc[i,j] = math.exp(-(math.pow(x.iloc[i,0] - w1.iloc[j,0], 2) + math.pow(x.iloc[i,1] - w1.iloc[j,1], 2))/(2*variance[j]))
+    for sample in range(len(train)):
+        for neuron in range(number_neurons_1st_layer):
+            for column in range(len(x.columns)):
+                z.iloc[sample,neuron] += math.pow(x.iloc[sample,column] - w1.iloc[neuron,column], 2)
+            z.iloc[sample,neuron] = math.exp(-z.iloc[sample,neuron]/(2*variance[neuron]))
 
     epoch = 0
     Eqm = 0
     lEqm = 1 
-    while(abs(Eqm - lEqm) > error_tolerance and epoch < 1000):
+    while(abs(Eqm - lEqm) > error_tolerance and epoch < 5000):
         lEqm = Eqm
 
         # SECOND LAYER WEIGHTS
         for i in range(len(train)):
-            y = (z.iloc[i,:] * w2.iloc[:,0]).sum()
+            y = logistic((z.iloc[i,:] * w2.iloc[:,0]).sum())
 
             for j in range(number_neurons_1st_layer + 1):
-                gradient = (d.iloc[i] - y) * dlogistic(z.iloc[i,j])
+                gradient = (d.iloc[i] - y) * dlogistic((z.iloc[i,:]).sum())
                 w2.iloc[j,0] += learning_rate * gradient * z.iloc[i,j]
         
         # QUADRATIC ERROR
@@ -101,12 +104,21 @@ def outputLayer(train,w1,w2, variance):
             y = (z.iloc[i,:] * w2.iloc[:,0]).sum()
             Eqm += math.pow(d.iloc[i] - y ,2)/2
         Eqm = Eqm/len(train) 
-        print epoch
-        print "[QUADRATIC ERROR] " + str(abs(Eqm - lEqm))
+
+        chart[0].append(epoch)
+        chart[1].append(Eqm)
 
         epoch += 1
-    
-    return w2
+        print str(Eqm) + " " + str(abs(Eqm - lEqm))
+
+    plt.figure(1)
+    plt.plot(chart[0][1:], chart[1][1:])
+    plt.xlabel('Epochs')
+    plt.ylabel('EQM')
+    plt.savefig("./" + str(number_neurons_1st_layer) + "_test_number_" + str(testNumber) + ".png", dpi = 500)
+    plt.close()
+
+    return w2, epoch, Eqm
 
 #////////////////////////////////////////////////////////////////////
 # LOGISTIC FUNCTION /////////////////////////////////////////////////
@@ -126,23 +138,27 @@ def dlogistic(x):
 # TEST SAMPLES //////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////
 
-def runTest(train,w1,w2, variance):
-    x = train.iloc[:,:-1]
+def runTest(test,w1,w2, variance, number_neurons_1st_layer):
+    x = test.iloc[:,:]
 
-    z = pd.DataFrame(np.zeros((len(train),3)))
+    z = pd.DataFrame(np.zeros((len(test), number_neurons_1st_layer + 1)))
     for i in range(len(z)):
-        z.iloc[i,2] -= 1
+        z.iloc[i,number_neurons_1st_layer] -= 1
 
-    for i in range(len(train)):
-        for j in range(number_neurons_1st_layer):
-            z.iloc[i,j] = math.exp(-(math.pow(x.iloc[i,0] - w1.iloc[j,0], 2) + math.pow(x.iloc[i,1] - w1.iloc[j,1], 2))/(2*variance[j])) 
+    for sample in range(len(test)):
+        for neuron in range(number_neurons_1st_layer):
+            for column in range(len(x.columns) - 1):
+                z.iloc[sample,neuron] += math.pow(x.iloc[sample,column] - w1.iloc[neuron,column], 2)
+            z.iloc[sample,neuron] = math.exp(-z.iloc[sample,neuron]/(2*variance[neuron]))
 
-    for i in range(len(train)):
-        y = (z.iloc[i,:] * w2.iloc[:,0]).sum()
-        if y > 0:
-            print "1 " + str(y)
-        else:
-            print "-1 " + str(y)
+            
+    out = []
+
+    for i in range(len(test)):
+        y = logistic((z.iloc[i,:] * w2.iloc[:,0]).sum())
+        out.append(y)
+
+    return out
 
 #////////////////////////////////////////////////////////////////////
 # MAIN //////////////////////////////////////////////////////////////
@@ -152,13 +168,24 @@ def runTest(train,w1,w2, variance):
 train = pd.read_csv('./train.csv', header = None)
 test = pd.read_csv('./test.csv', header = None)
 
-w1 = pd.DataFrame(train.iloc[:number_neurons_1st_layer,:-1])
-w2 = pd.DataFrame(np.random.rand(number_neurons_1st_layer + 1, number_neurons_2nd_layer))
+results = []
 
-# CALCULATE CLUSTERS
-w1, variance = kMeans(train, w1)
-w2, outputLayer(train,w1,w2,variance)
-runTest(test, w1, w2, variance)
-print "[COORDINATES W1] " + str(w1)
-print "[COORDINATES W2] " + str(w2)
-print "[VARIANCE] " + str(variance)
+for number_neurons in range(5,20,5):
+    number_neurons_1st_layer = number_neurons
+    for test_number in range(1,4):
+        w1 = pd.DataFrame(train.iloc[:number_neurons_1st_layer,:-1])
+        w2 = pd.DataFrame(np.random.rand(number_neurons_1st_layer + 1, number_neurons_2nd_layer))
+
+        # CALCULATE CLUSTERS
+        w1, variance = kMeans(train, w1,number_neurons_1st_layer)
+        w2, epoch, eqm = outputLayer(train,w1,w2,variance,test_number, number_neurons_1st_layer)
+        
+        index_results = (number_neurons/5) * 3 - (4 - test_number)
+        results.append(runTest(test, w1, w2, variance, number_neurons_1st_layer))
+        print "END TRAINING " + str(test_number) + " NUMBER OF EPOCHS: " + str(epoch) + " EQM: " + str(eqm)
+        print str(results[index_results])
+
+print "[RESUTLADOS] ////////////////////////////////////////////////////////////"
+
+print str(results)
+
